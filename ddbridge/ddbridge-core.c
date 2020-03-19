@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * ddbridge-core.c: Digital Devices bridge core functions
  *
- * Copyright (C) 2010-2019 Digital Devices GmbH
+ * Copyright (C) 2010-2017 Digital Devices GmbH
  *                         Marcus Metzler <mocm@metzlerbros.de>
  *                         Ralph Metzler <rjkm@metzlerbros.de>
  *
@@ -16,10 +17,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, point your browser to
- * http://www.gnu.org/copyleft/gpl.html
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "ddbridge.h"
@@ -1563,7 +1562,7 @@ static int dvb_register_adapters(struct ddb *dev)
 {
 	int i, ret = 0, l = 0;
 	struct ddb_port *port;
-	struct dvb_adapter *adap;
+	struct dvb_adapter *adap = 0;
 
 	if (adapter_alloc == 4) {
 		for (i = 0; i < dev->port_num; i++) {

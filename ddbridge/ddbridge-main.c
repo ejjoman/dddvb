@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * ddbridge.c: Digital Devices PCIe bridge driver
  *
@@ -5,22 +6,19 @@
  *                         Ralph Metzler <rjkm@metzlerbros.de>
  *                         Marcus Metzler <mocm@metzlerbros.de>
  *
- *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * version 2 only, as published by the Free Software Foundation.
- *
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, point your browser to
- * http://www.gnu.org/copyleft/gpl.html
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 #include "ddbridge.h"
 #include "ddbridge-io.h"
 
@@ -416,6 +414,7 @@ static const struct pci_device_id ddb_id_table[] __devinitconst = {
 	DDB_DEVICE_ANY(0x0008),
 	DDB_DEVICE_ANY(0x0009),
 	DDB_DEVICE_ANY(0x000a),
+	DDB_DEVICE_ANY(0x000b),
 	DDB_DEVICE_ANY(0x0011),
 	DDB_DEVICE_ANY(0x0012),
 	DDB_DEVICE_ANY(0x0013),
@@ -436,11 +435,55 @@ static const struct pci_device_id ddb_id_table[] __devinitconst = {
 };
 MODULE_DEVICE_TABLE(pci, ddb_id_table);
 
+
+static pci_ers_result_t ddb_pci_slot_reset(struct pci_dev *dev)
+{
+	pr_info("pci_slot_reset\n");
+	return PCI_ERS_RESULT_RECOVERED;
+}
+
+static void ddb_pci_resume(struct pci_dev *dev)
+{
+	pr_info("pci_resume\n");
+}
+
+static pci_ers_result_t ddb_pci_mmio_enabled(struct pci_dev *pdev)
+{
+	pr_info("pci_mmio_enabled\n");
+	return PCI_ERS_RESULT_NEED_RESET;
+}
+
+static pci_ers_result_t ddb_pci_error_detected(struct pci_dev *pdev,
+					       pci_channel_state_t state)
+{
+	switch (state) {
+	case pci_channel_io_frozen:
+		
+		return PCI_ERS_RESULT_CAN_RECOVER;
+	case pci_channel_io_perm_failure:
+		return PCI_ERS_RESULT_DISCONNECT;
+		break;
+	case pci_channel_io_normal:
+	default:
+		break;
+	}
+	return PCI_ERS_RESULT_NEED_RESET;
+}
+
+static const struct pci_error_handlers ddb_error = {
+	.error_detected = ddb_pci_error_detected,
+	.mmio_enabled = ddb_pci_mmio_enabled,
+	.slot_reset = ddb_pci_slot_reset,
+	.resume = ddb_pci_resume,
+};
+
+
 static struct pci_driver ddb_pci_driver = {
 	.name        = "ddbridge",
 	.id_table    = ddb_id_table,
 	.probe       = ddb_probe,
 	.remove      = ddb_remove,
+	.err_handler = &ddb_error,
 };
 
 static __init int module_init_ddbridge(void)
@@ -449,7 +492,7 @@ static __init int module_init_ddbridge(void)
 
 	pr_info("Digital Devices PCIE bridge driver "
 		DDBRIDGE_VERSION
-		", Copyright (C) 2010-17 Digital Devices GmbH\n");
+		", Copyright (C) 2010-19 Digital Devices GmbH\n");
 	stat = ddb_init_ddbridge();
 	if (stat < 0)
 		return stat;

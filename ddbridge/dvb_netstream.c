@@ -245,7 +245,7 @@ int dvb_netstream_init(struct dvb_adapter *dvb_adapter,
 	INIT_LIST_HEAD(&ns->nssl);
 	return 0;
 }
-EXPORT_SYMBOL(dvb_netstream_init);
+//EXPORT_SYMBOL(dvb_netstream_init);
 
 void dvb_netstream_release(struct dvb_netstream *ns)
 {
@@ -256,4 +256,4 @@ void dvb_netstream_release(struct dvb_netstream *ns)
 	}
 	dvb_unregister_device(ns->dvbdev);
 }
-EXPORT_SYMBOL(dvb_netstream_release);
+//EXPORT_SYMBOL(dvb_netstream_release);

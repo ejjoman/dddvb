@@ -48,7 +48,7 @@ static int mci_reset(struct mci *state)
 	}
 	if ((status & MCI_CONTROL_READY) == 0 )
 		return -1;
-	if (link->ids.device == 0x0009)
+	if (link->ids.device == 0x0009  || link->ids.device == 0x000b)
 		ddblwritel(link, SX8_TSCONFIG_MODE_NORMAL, SX8_TSCONFIG);
 	return 0;
 }
@@ -57,7 +57,7 @@ int ddb_mci_config(struct mci *state, u32 config)
 {
 	struct ddb_link *link = state->base->link;
 
-	if (link->ids.device != 0x0009)
+	if (link->ids.device != 0x0009  && link->ids.device != 0x000b)
 		return -EINVAL;
 	ddblwritel(link, config, SX8_TSCONFIG);
 	return 0;
@@ -87,14 +87,16 @@ static int ddb_mci_cmd_raw_unlocked(struct mci *state,
 
 		printk("MCI timeout\n");
 		val = ddblreadl(link, MCI_CONTROL);
-		if (val == 0xffffffff)
+		if (val == 0xffffffff) {
 			printk("Lost PCIe link!\n");
-		else {
-			printk("DDBridge IRS %08x\n", istat);
+			return -EIO;
+		} else {
+			printk("DDBridge IRS %08x link %u\n", istat, link->nr);
 			if (istat & 1) 
-				ddblwritel(link, istat & 1, INTERRUPT_ACK);
+				ddblwritel(link, istat, INTERRUPT_ACK);
+			if (link->nr)
+				ddbwritel(link->dev, 0xffffff, INTERRUPT_ACK);
 		}
-		return -EIO;
 	}
 	if (res && res_len)
 		for (i = 0; i < res_len; i++)
@@ -118,12 +120,19 @@ int ddb_mci_cmd(struct mci *state,
 		struct mci_result *result)
 {
 	int stat;
-	
+	struct mci_result res;
+
+	if (!result)
+		result = &res;
 	mutex_lock(&state->base->mci_lock);
 	stat = ddb_mci_cmd_raw_unlocked(state,
 				 (u32 *)command, sizeof(*command)/sizeof(u32),
 				 (u32 *)result, sizeof(*result)/sizeof(u32));
 	mutex_unlock(&state->base->mci_lock);
+	if (command && result && (result->status & 0x80))
+		dev_warn(state->base->link->dev->dev,
+			 "mci_command 0x%02x, error=0x%02x\n",
+			 command->command, result->status);
 	return stat;
 }
 
@@ -141,6 +150,7 @@ int ddb_mci_cmd_raw(struct mci *state,
 	return stat;
 }
 
+#if 0
 static int ddb_mci_get_iq(struct mci *mci, u32 demod, s16 *i, s16 *q)
 {
 	int stat;
@@ -158,6 +168,7 @@ static int ddb_mci_get_iq(struct mci *mci, u32 demod, s16 *i, s16 *q)
 	}
 	return stat;
 }
+#endif
 
 int ddb_mci_get_status(struct mci *mci, struct mci_result *res)
 {
